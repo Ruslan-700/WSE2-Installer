@@ -6,7 +6,7 @@
   #define MyAppVersion "1.1.3.7"
 #endif
 #ifndef SourcePath
-  #define SourcePath ".\files\WSE2"
+  #define SourcePath ".\files\WSE2 WFaS"
 #endif
 #define MyAppPublisher "K700, cmpxchg8b, AgentSmith"
 #define MyAppURL "https://forums.taleworlds.com/index.php?threads/warband-script-enhancer-2-v1-1-1-5.384882/"
@@ -24,11 +24,11 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 AppendDefaultDirName=no
-DefaultDirName={reg:HKLM\SOFTWARE\Mount&Blade Warband,Install_Path|{commonpf}\Mount&Blade Warband}\
+DefaultDirName={reg:HKLM\SOFTWARE\Mount&Blade With Fire and Sword,Install_Path|{commonpf}\Mount&Blade With Fire and Sword}\
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 DirExistsWarning=no
-OutputBaseFilename=WSE2_Installer
+OutputBaseFilename=WSE2_WFaS_Installer
 ; Remove the following line to run in administrative install mode (install for all users.)
 PrivilegesRequired=lowest
 SetupIconFile=Images\iconwb.ico
@@ -52,13 +52,13 @@ Source: "{#SourcePath}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubd
 ;Below is an empty placeholder file in case the steam user doesnt have a shortcuts.vdf yet
 Source: ".\files\shortcuts.vdf"; DestDir: "{code:find_shortcuts_dir}"; Check: WizardIsTaskSelected('steam_shortcut'); Flags: onlyifdoesntexist
 Source: ".\files\vdf-shortcut-editor.exe"; DestDir: "{app}"; Flags: deleteafterinstall
-Source: "{userappdata}\Mount&Blade Warband\profiles.dat"; DestDir: "{userappdata}\Mount&Blade Warband WSE2\"; Check: can_copy_profiles() and WizardIsTaskSelected('copy_profiles'); Flags: onlyifdoesntexist external
+Source: "{userappdata}\Mount&Blade With Fire and Sword\profiles.dat"; DestDir: "{userappdata}\Mount&Blade WFaS WSE2\"; Check: can_copy_profiles() and WizardIsTaskSelected('copy_profiles'); Flags: onlyifdoesntexist external
 
 [Icons]
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\vdf-shortcut-editor.exe"; Parameters: """{code:get_shortcuts_file}"" -a -1287593386 ""Mount & Blade: Warband WSE2"" ""{app}\{#MyAppExeName}"""; StatusMsg: "Adding to steam..."; Flags: runhidden; Check: WizardIsTaskSelected('steam_shortcut');
+Filename: "{app}\vdf-shortcut-editor.exe"; Parameters: """{code:get_shortcuts_file}"" -a -1287593386 ""Mount & Blade With Fire and Sword WSE2"" ""{app}\{#MyAppExeName}"""; StatusMsg: "Adding to steam..."; Flags: runhidden; Check: WizardIsTaskSelected('steam_shortcut');
 
 [Code]
 var
@@ -136,17 +136,17 @@ end;
 
 function can_copy_profiles(): boolean;
 begin
-  result := FileExists(ExpandConstant('{userappdata}\Mount&Blade Warband\profiles.dat')) and not FileExists(ExpandConstant('{userappdata}\Mount&Blade Warband WSE2\profiles.dat'))
+  result := FileExists(ExpandConstant('{userappdata}\Mount&Blade With Fire and Sword\profiles.dat')) and not FileExists(ExpandConstant('{userappdata}\Mount&Blade WFaS WSE2\profiles.dat'))
 end;
 
 procedure OnDirChanged(Sender: TObject);
 begin
-  if FileExists(WizardForm.DirEdit.Text + '\mb_warband.exe') then begin
+  if FileExists(WizardForm.DirEdit.Text + '\mb_wfas.exe') then begin
     DirOk_Label.Caption := '✓';
     DirOk_Label.Font.Color := clGreen;
   end
   else begin
-    DirOk_Label.Caption := 'x Couldn''t find mb_warband.exe - Select your M&&B Warband folder.';
+    DirOk_Label.Caption := 'x Couldn''t find mb_wfas.exe - Select your M&&B WFaS folder.';
     DirOk_Label.Font.Color := clMaroon;
   end;
 end;
