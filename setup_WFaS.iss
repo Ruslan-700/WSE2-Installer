@@ -43,12 +43,12 @@ WizardImageFile=Images\mb_inst_left.bmp
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}";
 Name: "steam_shortcut"; Description: "Add to your steam library";  Check: has_shortcuts_dir
 Name: "copy_profiles"; Description: "Copy profiles"; Check: can_copy_profiles
 
 [Files]
-Source: "{#SourcePath}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
+Source: "{#SourcePath}\*"; Excludes: "*dedicated*,*server*,\WSE2 SDK\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 ;Below is an empty placeholder file in case the steam user doesnt have a shortcuts.vdf yet
 Source: ".\files\shortcuts.vdf"; DestDir: "{code:find_shortcuts_dir}"; Check: WizardIsTaskSelected('steam_shortcut'); Flags: onlyifdoesntexist
 Source: ".\files\vdf-shortcut-editor.exe"; DestDir: "{app}"; Flags: deleteafterinstall
@@ -59,6 +59,7 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 Filename: "{app}\vdf-shortcut-editor.exe"; Parameters: """{code:get_shortcuts_file}"" -a -1287593386 ""Mount & Blade With Fire and Sword WSE2"" ""{app}\{#MyAppExeName}"""; StatusMsg: "Adding to steam..."; Flags: runhidden; Check: WizardIsTaskSelected('steam_shortcut');
+Filename: {app}\wse2_launcher.exe; Description: Start WSE2; Flags: postinstall nowait skipifsilent
 
 [Code]
 var
