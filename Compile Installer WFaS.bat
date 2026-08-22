@@ -1,0 +1,1 @@
+start Inno\iscc.exe setup_WFaS.iss /DMyAppVersion=1.1.3.7 /DSourcePath=".\files\WSE2 WFaS"
