@@ -62,9 +62,57 @@ Filename: "{app}\vdf-shortcut-editor.exe"; Parameters: """{code:get_shortcuts_fi
 Filename: {app}\wse2_launcher.exe; Description: Start WSE2; Flags: postinstall nowait skipifsilent
 
 [Code]
+type BUTTON_IMAGELIST = record
+  himl: THandle;
+  margin: TRect;
+  uAlign: UINT;
+end;
+
+const
+  ILC_COLOR32 = $20;
+  BCM_SETIMAGELIST = $1600 + $0002;
+  IDI_WARNING = 32515;
+  IDI_SHIELD = 32518;
+
+///////////////////////////////////////////////////////////////////////////
+//                              Imports
+///////////////////////////////////////////////////////////////////////////
+procedure ExitProcess(uExitCode: UINT);
+  external 'ExitProcess@kernel32.dll stdcall';
+
+function ShellExecute(hwnd: HWND; lpOperation: string; lpFile: string;
+  lpParameters: string; lpDirectory: string; nShowCmd: Integer): THandle;
+  external 'ShellExecuteW@shell32.dll stdcall';
+
+function LoadIcon(
+  hInst: Integer; IconName: Integer): THandle;
+  external 'LoadIconW@User32.dll stdcall';
+
+function ImageList_AddIcon(
+  ImageList: THandle; Icon: THandle): Integer;
+  external 'ImageList_AddIcon@Comctl32.dll stdcall';
+
+function ImageList_Create(CX, CY: Integer; Flags: UINT;
+  Initial, Grow: Integer): THandle;
+  external 'ImageList_Create@Comctl32.dll stdcall';
+
+function SendSetImageListMessage(
+  Wnd: THandle; Msg: Cardinal; WParam: Cardinal;
+  var LParam: BUTTON_IMAGELIST): Cardinal;
+  external 'SendMessageW@User32.dll stdcall';
+
+///////////////////////////////////////////////////////////////////////////
+//                          Global Variables
+///////////////////////////////////////////////////////////////////////////
 var
   DirOk_Label, Finished_Notice_Label: TNewStaticText;
+  UAC_ImageList: THandle;
+  UAC_ButtonImageList: BUTTON_IMAGELIST;
+  dir_skipped: Boolean;
 
+///////////////////////////////////////////////////////////////////////////
+//                               Code
+///////////////////////////////////////////////////////////////////////////
 function find_shortcuts_dir(Param: string): string;
 var
   success: boolean;
@@ -140,37 +188,100 @@ begin
   result := FileExists(ExpandConstant('{userappdata}\Mount&Blade Warband\profiles.dat')) and not FileExists(ExpandConstant('{userappdata}\Mount&Blade Warband WSE2\profiles.dat'))
 end;
 
+//Path can have folders that don't exist yet, return the existing part
+function ExtractExistingPath(Path: string): string;
+begin
+  Result := Path;
+  while not DirExists(Path) do begin
+    Path := ExtractFileDir(Path);
+    if Path = Result then begin //quit infinite loop
+      Result := '';
+      Exit;
+    end;
+    Result := Path;
+  end;
+end;
+
+function HaveWriteAccessToAppFolder: Boolean;
+var
+  FileName: string;
+begin
+  FileName := AddBackslash(ExtractExistingPath(WizardDirValue)) + '_writetest.tmp';
+  Result := SaveStringToFile(FileName, 'test', False);
+  if Result then begin DeleteFile(FileName); end;
+end;
+
+procedure Set_UAC_icon(show: Boolean);
+begin
+  if show then begin
+    UAC_ButtonImageList.himl := UAC_ImageList;
+    SendSetImageListMessage(WizardForm.NextButton.Handle, BCM_SETIMAGELIST, 0, UAC_ButtonImageList);
+  end
+  else begin
+    UAC_ButtonImageList.himl := 0;
+    SendSetImageListMessage(WizardForm.NextButton.Handle, BCM_SETIMAGELIST, 0, UAC_ButtonImageList);
+  end;
+end;
+
+function HasParam(Param: String): Boolean;
+var
+  i: Integer;
+  s : String;
+begin
+  Result := False;
+  Param := '/'+Param;
+  for i := 1 to ParamCount do begin
+    s := ParamStr(i);
+
+    if (CompareText(s, Param) = 0) or
+       (Pos(Param+'=', s) = 1)
+    then begin
+      Result := True;
+      Exit;
+    end;
+  end;
+end;
+///////////////////////////////////////////////////////////////////////////
+//                              Events
+///////////////////////////////////////////////////////////////////////////
+
 procedure OnDirChanged(Sender: TObject);
 begin
   if FileExists(WizardForm.DirEdit.Text + '\mb_warband.exe') then begin
-    DirOk_Label.Caption := '✓';
+    DirOk_Label.Caption := '✓ Game found';
     DirOk_Label.Font.Color := clGreen;
   end
   else begin
     DirOk_Label.Caption := 'x Couldn''t find mb_warband.exe - Select your M&&B Warband folder.';
     DirOk_Label.Font.Color := clMaroon;
   end;
+
+  Set_UAC_icon(not HaveWriteAccessToAppFolder());
 end;
 
-procedure InitializeWizard();
+function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  path, params: String;
+  RetVal: Integer;
 begin
-  WizardForm.DirEdit.OnChange := @OnDirChanged;
-  
-  DirOk_Label := TNewStaticText.Create(WizardForm.SelectDirPage);
-  DirOk_Label.Parent := WizardForm.SelectDirPage;
-  DirOk_Label.Top := WizardForm.DirEdit.Top + WizardForm.DirEdit.Height + ScaleY(8);
-  DirOk_Label.Left := WizardForm.DirEdit.Left;
-  DirOk_Label.Caption := 'My checkbox';
-  // See https://stackoverflow.com/q/30469660/850848
-  DirOk_Label.Height := ScaleY(DirOk_Label.Height);
+  Result := True;
+  if CurPageID <> wpSelectDir then begin Exit; end;
 
-  Finished_Notice_Label := TNewStaticText.Create(WizardForm.FinishedPage);
-  Finished_Notice_Label.Parent := WizardForm.FinishedPage;
-  Finished_Notice_Label.Top := WizardForm.FinishedLabel.Top + WizardForm.FinishedLabel.Height + ScaleY(24);
-  Finished_Notice_Label.Left := WizardForm.FinishedLabel.Left;
-  Finished_Notice_Label.Caption := '* Restart Steam to see WSE2 in your library *';
-  Finished_Notice_Label.Height := ScaleY(Finished_Notice_Label.Height);
-  Finished_Notice_Label.Hide();
+  if (not HaveWriteAccessToAppFolder()) and not HasParam('UAC') then begin
+    //Restart with elevated priviliges
+    path := ExpandConstant('{srcexe}');
+    params := '/Dir="' +WizardDirValue+ '" /UAC';
+
+    RetVal := ShellExecute(0, 'runas', path, params, '', SW_SHOW);
+    if (RetVal>32) then
+    begin
+      ExitProcess(0);
+    end
+    else begin
+      MsgBox('Unable to launch the elevated process. Code ' + IntToStr(RetVal), mbError, MB_OK);
+      Set_UAC_icon(false);
+    end;
+  end;
 end;
 
 procedure CurPageChanged(CurPageID: Integer);
@@ -179,6 +290,13 @@ var
 begin
   if CurPageID = wpSelectDir then begin                                                                          
     OnDirChanged(nil);
+
+    if HasParam('UAC') and HasParam('Dir') and not dir_skipped then begin
+      //Setup got started by itself with elevated rights
+      //Skip dir page once
+      dir_skipped := True;
+      WizardForm.NextButton.OnClick(nil);
+    end;
   end
   else if (CurPageID = wpReady) and WizardIsTaskSelected('steam_shortcut') then begin
     p := get_shortcuts_file('');
@@ -196,4 +314,40 @@ begin
       Finished_Notice_Label.Show();
     end 
   end
+end;
+
+procedure InitializeWizard();
+var 
+  ShieldIcon: THandle;
+begin
+  WizardForm.DirEdit.OnChange := @OnDirChanged;
+
+  //Indicate if warband exe found
+  DirOk_Label := TNewStaticText.Create(WizardForm.SelectDirPage);
+  DirOk_Label.Parent := WizardForm.SelectDirPage;
+  DirOk_Label.Top := WizardForm.DirEdit.Top + WizardForm.DirEdit.Height + ScaleY(8);
+  DirOk_Label.Left := WizardForm.DirEdit.Left;
+  DirOk_Label.Caption := 'My checkbox';
+  // See https://stackoverflow.com/q/30469660/850848
+  DirOk_Label.Height := ScaleY(DirOk_Label.Height);
+
+  //Load UAC icon
+  ShieldIcon := LoadIcon(0, IDI_SHIELD);
+  UAC_ImageList := ImageList_Create(ScaleX(16), ScaleY(16), ILC_COLOR32, 1, 1);
+  ImageList_AddIcon(UAC_ImageList, ShieldIcon);
+
+  UAC_ButtonImageList.margin.Left := ScaleX(2);
+  UAC_ButtonImageList.margin.Top := ScaleY(2);
+  UAC_ButtonImageList.margin.Right := ScaleX(0);
+  UAC_ButtonImageList.margin.Bottom := ScaleY(4);
+  UAC_ButtonImageList.uAlign := 0;
+
+  
+  Finished_Notice_Label := TNewStaticText.Create(WizardForm.FinishedPage);
+  Finished_Notice_Label.Parent := WizardForm.FinishedPage;
+  Finished_Notice_Label.Top := WizardForm.FinishedLabel.Top + WizardForm.FinishedLabel.Height + ScaleY(24);
+  Finished_Notice_Label.Left := WizardForm.FinishedLabel.Left;
+  Finished_Notice_Label.Caption := '* Restart Steam to see WSE2 in your library *';
+  Finished_Notice_Label.Height := ScaleY(Finished_Notice_Label.Height);
+  Finished_Notice_Label.Hide();
 end;
