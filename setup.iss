@@ -5,8 +5,8 @@
 #ifndef MyAppVersion
   #define MyAppVersion "1.1.3.7"
 #endif
-#ifndef SourcePath
-  #define SourcePath ".\files\WSE2"
+#ifndef WSE_Path
+  #define WSE_Path ".\files\WSE2"
 #endif
 #define MyAppPublisher "K700, cmpxchg8b, AgentSmith"
 #define MyAppURL "https://forums.taleworlds.com/index.php?threads/warband-script-enhancer-2-v1-1-1-5.384882/"
@@ -48,7 +48,7 @@ Name: "steam_shortcut"; Description: "Add to your steam library";  Check: has_sh
 Name: "copy_profiles"; Description: "Copy profiles"; Check: can_copy_profiles
 
 [Files]
-Source: "{#SourcePath}\*"; Excludes: "*dedicated*,*server*,\WSE2 SDK\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
+Source: "{#WSE_Path}\*"; Excludes: "*dedicated*,*server*,\WSE2 SDK\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 ;Below is an empty placeholder file in case the steam user doesnt have a shortcuts.vdf yet
 Source: ".\files\shortcuts.vdf"; DestDir: "{code:find_shortcuts_dir}"; Check: WizardIsTaskSelected('steam_shortcut'); Flags: onlyifdoesntexist
 Source: ".\files\vdf-shortcut-editor.exe"; DestDir: "{app}"; Flags: deleteafterinstall
