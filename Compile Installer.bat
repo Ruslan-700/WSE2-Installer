@@ -1,1 +1,1 @@
-start Inno\iscc.exe setup.iss /DMyAppVersion=1.1.3.7 /DWSE_Path=".\files\WSE2"
+start Inno\iscc.exe setup.iss /DMyAppVersion=1.1.3.7
