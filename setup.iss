@@ -10,12 +10,16 @@
 
 #ifndef WFaS
   #define MyAppName "Warband Script Enhancer 2"
-  #define WSE_Path ".\files\WSE2"
+  #ifndef WSE_Path
+    #define WSE_Path ".\files\WSE2"
+  #endif
   #define MyDefaultDirName "{reg:HKLM\SOFTWARE\Mount&Blade Warband,Install_Path|{commonpf}\Mount&Blade Warband}\"
   #define MyOutputBaseFilename "WSE2_Installer"
 #else
   #define MyAppName "Warband Script Enhancer 2 WFaS"
-  #define WSE_Path ".\files\WSE2 WFaS"
+  #ifndef WSE_Path
+    #define WSE_Path ".\files\WSE2 WFaS"
+  #endif
   #define MyDefaultDirName "{reg:HKLM\SOFTWARE\Mount&Blade With Fire and Sword,Install_Path|{commonpf}\Mount&Blade With Fire and Sword}\"
   #define MyOutputBaseFilename "WSE2_WFaS_Installer"
 #endif
